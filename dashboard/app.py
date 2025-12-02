@@ -6,10 +6,8 @@ import time
 
 app = Flask(__name__)
 
-# Data storage
 data_store = {}
 
-# Konfigurasi Failover
 BROKER_LIST = ["broker-primary", "broker-secondary"]
 current_broker_idx = 0
 client = mqtt.Client()
@@ -37,18 +35,15 @@ def mqtt_worker():
             client.subscribe("sensor/#")
             print(f"[DASHBOARD] Connected to {target}")
             
-            # Loop forever akan block di sini sampai disconnect/error
             client.loop_forever() 
             
         except Exception:
             print(f"[DASHBOARD] Connection lost/failed to {target}")
         
-        # Jika loop_forever tembus (artinya disconnect), pindah broker
         print("[DASHBOARD] Switching Broker...")
         current_broker_idx = (current_broker_idx + 1) % len(BROKER_LIST)
         time.sleep(2)
 
-# Start Background Thread
 t = threading.Thread(target=mqtt_worker)
 t.daemon = True
 t.start()
