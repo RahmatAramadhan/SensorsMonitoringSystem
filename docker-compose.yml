@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+
+  broker-primary:
+    image: eclipse-mosquitto:2.0
+    container_name: broker-primary
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - ha-net
+    
+  broker-secondary:
+    image: eclipse-mosquitto:2.0
+    container_name: broker-secondary
+    ports:
+      - "1884:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - ha-net
+
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard-ui
+    ports:
+      - "5001:5000"
+    depends_on:
+      - broker-primary
+      - broker-secondary
+    networks:
+      - ha-net
+
+  sensor-temp:
+    build: ./sensor_node
+    container_name: sensor-temp
+    environment:
+      - SENSOR_TYPE=temperature
+    networks:
+      - ha-net
+
+  sensor-humidity:
+    build: ./sensor_node
+    container_name: sensor-humidity
+    environment:
+      - SENSOR_TYPE=humidity
+    networks:
+      - ha-net
+
+  sensor-volt:
+    build: ./sensor_node
+    container_name: sensor-volt
+    environment:
+      - SENSOR_TYPE=voltage
+    networks:
+      - ha-net
+
+  sensor-air:
+    build: ./sensor_node
+    container_name: sensor-air
+    environment:
+      - SENSOR_TYPE=air_quality
+    networks:
+      - ha-net
+
+networks:
+  ha-net:
+    driver: bridge
