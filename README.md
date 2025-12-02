@@ -1,126 +1,158 @@
+# SensorsMonitoringSystem — High-Availability IoT Monitoring
 
-**SensorsMonitoringSystem — High-Availability IoT Monitoring (README)**
+![IoT](https://img.shields.io/badge/IoT-Project-blue?style=flat-square) ![Docker](https://img.shields.io/badge/Docker-Compose-orange?style=flat-square) ![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)
 
-Ringkasan singkat
-- Project ini men-simulasikan sistem monitoring IoT yang terdiri dari:
-  - Dua instance Mosquitto (broker-primary, broker-secondary) untuk demo failover/HA.
-  - Beberapa container sensor yang mem-publish data ke topik MQTT.
-  - Sebuah dashboard berbasis Flask yang berlangganan topik `sensor/#` dan menampilkan nilai sensor.
+## 📖 Gambaran Umum
 
-Tujuan README ini
-- Panduan cepat agar pengguna (pengembang/pengetes) dapat membangun, menjalankan, dan menguji proyek ini secara lokal.
+**SensorsMonitoringSystem** adalah simulasi arsitektur sistem pemantauan IoT yang dirancang untuk mendemonstrasikan konsep *High Availability* (HA) dan *Failover*. Proyek ini mensimulasikan lingkungan di mana sensor mengirimkan data secara terus-menerus ke sistem pusat melalui protokol MQTT, dengan mekanisme redundansi untuk memastikan data tetap terkirim meskipun broker utama mengalami gangguan.
 
-Prasyarat
-- Docker (Engine) dan Docker Compose tersedia dan berjalan.
-- Jika di Windows: gunakan Docker Desktop (WSL2 direkomendasikan) dan pastikan resource/port tidak diblokir.
+Sistem ini terdiri dari komponen-komponen berikut:
+- **MQTT Brokers (Failover Cluster):** Dua *instance* Mosquitto (Primary & Secondary) untuk menjamin ketersediaan layanan.
+- **Sensor Nodes:** Beberapa *container* yang mensimulasikan perangkat IoT, mempublikasikan data telemetri ke topik MQTT.
+- **Dashboard Monitoring:** Aplikasi berbasis web (Flask) yang berlangganan (*subscribe*) ke topik data sensor dan memvisualisasikan status secara *real-time*.
 
-Quick start (jalankan seluruh stack)
-1. Buka terminal di folder proyek (`IOTMonitoring`).
-2. Build dan jalankan semua service:
+---
 
+## 🛠️ Prasyarat Sistem
+
+Sebelum menjalankan proyek ini, pastikan perangkat Anda telah memenuhi kebutuhan berikut:
+
+1. **Docker Engine** & **Docker Compose** (versi terbaru direkomendasikan).
+2. **Pengguna Windows:** Disarankan menggunakan **Docker Desktop** dengan backend **WSL2**.
+3. Pastikan *port* host berikut tidak sedang digunakan oleh aplikasi lain: `1883`, `1884`, `5001`.
+
+---
+
+## 🚀 Panduan Memulai (Quick Start)
+
+Ikuti langkah-langkah berikut untuk menjalankan seluruh stack aplikasi secara lokal.
+
+### 1. Persiapan Lingkungan
+Buka terminal dan arahkan direktori ke folder proyek:
+```bash
+cd IOTMonitoring
+```
+
+### 2. Build dan Jalankan Layanan
+Jalankan perintah berikut untuk membangun *image* dan menjalankan *container*:
 ```bash
 docker-compose up --build
 ```
 
-3. Akses dashboard di browser:
-
+### 3. Akses Dashboard
+Setelah semua layanan berjalan, buka peramban (*browser*) Anda dan akses alamat berikut untuk melihat visualisasi data:
 ```text
 http://localhost:5001
 ```
 
-4. Hentikan semua service:
-
+### 4. Menghentikan Layanan
+Untuk menghentikan dan menghapus container yang berjalan:
 ```bash
 docker-compose down
 ```
 
-Penjelasan port dan layanan
-- `broker-primary` — Mosquitto, host port `1883` -> container `1883`.
-- `broker-secondary` — Mosquitto cadangan, host port `1884` -> container `1883`.
-- `dashboard` — Flask app, container mendengarkan `5000`, dipetakan ke host `5001`.
+---
 
-Struktur file penting
-- `docker-compose.yml` — konfigurasi layanan dan jaringan.
-- `mosquitto.conf` — konfigurasi Mosquitto yang dipakai kedua broker.
-- `dashboard/` — aplikasi Flask (`app.py`), `Dockerfile`, `requirements.txt`.
-- `sensor_node/` — simulator sensor (`main.py`), `Dockerfile`, `requirements.txt`.
+## ⚙️ Arsitektur & Konfigurasi Port
 
-Format data yang direkomendasikan
-- Topik MQTT: `sensor/<type>` (contoh: `sensor/temperature`).
-- Contoh payload JSON:
+Berikut adalah rincian layanan dan pemetaan *port* yang digunakan dalam proyek ini:
+
+| Service Name | Tipe Layanan | Port Internal | Port Host (Akses Luar) | Keterangan |
+| :--- | :--- | :--- | :--- | :--- |
+| `broker-primary` | MQTT Broker | 1883 | **1883** | Broker utama. |
+| `broker-secondary` | MQTT Broker | 1883 | **1884** | Broker cadangan (*failover*). |
+| `dashboard` | Web App (Flask) | 5000 | **5001** | Antarmuka pengguna. |
+| `sensor-*` | Python Script | - | - | *Publisher* data (internal). |
+
+### Struktur File Utama
+* `docker-compose.yml`: Orkestrasi seluruh layanan dan jaringan.
+* `mosquitto.conf`: Konfigurasi standar untuk kedua broker MQTT.
+* `dashboard/`: Kode sumber aplikasi web (`app.py`), Dockerfile, dan dependensi.
+* `sensor_node/`: Kode simulasi sensor (`main.py`) yang menangani logika pengiriman data.
+
+---
+
+## 📡 Format Data & Protokol
+
+Agar data dapat ditampilkan dengan benar pada Dashboard, seluruh sensor harus mengikuti standar berikut:
+
+* **Topik MQTT:** `sensor/<tipe_sensor>` (Contoh: `sensor/temperature`, `sensor/humidity`)
+* **Format Payload (JSON):**
 
 ```json
-{"sensor": "temperature", "value": 25.5, "broker_used": "broker-primary"}
+{
+  "sensor": "temperature",
+  "value": 25.5,
+  "broker_used": "broker-primary"
+}
 ```
 
-Debugging & perintah berguna
-- Tampilkan semua log (real time):
+> **Catatan:** Field `broker_used` berguna untuk memantau broker mana yang sedang aktif melayani sensor tersebut.
 
+---
+
+## 🐛 Debugging & Monitoring Log
+
+Berikut adalah perintah-perintah yang berguna untuk memantau status sistem:
+
+**Melihat log seluruh layanan (Real-time):**
 ```bash
 docker-compose logs -f
 ```
 
-- Log dashboard saja:
-
+**Melihat log layanan spesifik:**
 ```bash
+# Log Dashboard
 docker-compose logs -f dashboard
-```
 
-- Log sensor (mis. temperature):
-
-```bash
+# Log Sensor Tertentu
 docker-compose logs -f sensor-temp
 ```
 
-- Cek container berjalan / port mapping:
-
+**Verifikasi pesan MQTT secara manual:**
+Anda dapat berlangganan langsung ke topik untuk memastikan data terkirim:
 ```bash
-docker ps
-```
-
-- Subscribing langsung ke broker untuk melihat pesan:
-
-```bash
-# dari host (jika mosquitto_sub tersedia)
+# Melalui Host (jika mosquitto-clients terinstall)
 mosquitto_sub -h localhost -p 1883 -t 'sensor/#' -v
 
-# atau dari dalam container broker-primary
+# Melalui dalam Container
 docker exec -it broker-primary mosquitto_sub -t 'sensor/#' -v
 ```
 
-Masalah umum & solusi singkat
-- `ModuleNotFoundError: No module named 'flask'` saat memulai dashboard:
-  - Pastikan `dashboard/requirements.txt` mencantumkan `Flask` dan `gunicorn`, lalu rebuild service:
+---
 
-```bash
-docker-compose build dashboard
-docker-compose up --build dashboard
-```
+## ❓ Pemecahan Masalah (Troubleshooting)
 
-- Dashboard tampil tetapi kosong (tidak ada sensor):
-  - Pastikan sensor mem-publish ke topik `sensor/#` dan payload berformat JSON dengan `sensor` dan `value`.
-  - Periksa log sensor dan dashboard untuk melihat apakah koneksi/publish terjadi.
+Berikut adalah solusi untuk beberapa kendala yang umum terjadi:
 
-- Sensor terus reconnect / tidak bisa publish:
-  - Pastikan `BROKER_LIST` dalam `sensor_node/main.py` berisi nama service yang sesuai (`broker-primary`, `broker-secondary`).
-  - Periksa jaringan Docker dan firewall.
+### 1. Error `ModuleNotFoundError: No module named 'flask'`
+Terjadi jika dependensi belum terinstall dalam *image*.
+* **Solusi:** Pastikan `flask` dan `gunicorn` ada di `dashboard/requirements.txt`, lalu bangun ulang container:
+    ```bash
+    docker-compose build dashboard
+    docker-compose up --build dashboard
+    ```
 
-Rebuild service tertentu
+### 2. Dashboard Kosong (Tidak Ada Data)
+* **Penyebab:** Format data salah atau sensor gagal *publish*.
+* **Solusi:**
+    * Pastikan sensor mengirim ke topik `sensor/#`.
+    * Pastikan payload berbentuk JSON valid yang mengandung *key* `sensor` dan `value`.
 
-```bash
-docker-compose build sensor-temp
-docker-compose up -d sensor-temp
-```
+### 3. Sensor Terus Reconnect / Gagal Publish
+* **Penyebab:** Konfigurasi host broker tidak sesuai atau masalah jaringan Docker.
+* **Solusi:** Periksa variabel `BROKER_LIST` pada `sensor_node/main.py`. Pastikan nama host sesuai dengan nama service di docker-compose (`broker-primary`, `broker-secondary`).
 
-Kontribusi & pengembangan
-- Jika ingin menambahkan fitur atau memperbaiki bug:
- 1. Fork repo dan buat branch baru.
- 2. Uji perubahan secara lokal dengan `docker-compose up --build`.
- 3. Ajukan pull request dengan deskripsi perubahan.
+---
 
-Lisensi
-- (Tambahkan lisensi proyek jika ingin dipublikasikan; contoh: MIT)
+## 🤝 Kontribusi
 
-Butuh bantuan?
-- Kalau perlu saya bantu standardisasi topik/payload atau buat script setup, beri tahu apa yang ingin disederhanakan.
+Kontribusi sangat terbuka untuk pengembangan proyek ini. Jika Anda ingin menambahkan fitur atau memperbaiki *bug*:
 
+1. **Fork** repositori ini.
+2. Buat **Branch** baru untuk fitur Anda.
+3. Lakukan pengujian lokal dengan `docker-compose up`.
+4. Ajukan **Pull Request** dengan deskripsi perubahan yang jelas.
+
+---
+*Dibuat untuk keperluan simulasi dan pembelajaran arsitektur IoT Terdistribusi.*
