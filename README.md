@@ -114,7 +114,7 @@ docker-compose up -d sensor-temp
 
 Kontribusi & pengembangan
 - Jika ingin menambahkan fitur atau memperbaiki bug:
-  1. Fork repo dan buat branch baru.
+ 1. Fork repo dan buat branch baru.
  2. Uji perubahan secara lokal dengan `docker-compose up --build`.
  3. Ajukan pull request dengan deskripsi perubahan.
 
